@@ -7,9 +7,9 @@ import { AppHeader } from "@/components/app-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2 } from "lucide-react"
+import { Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import { getUserProfile, updateUserProfile } from "@/lib/supabase/profiles-client"
 
 export default function ContaPage() {
@@ -19,6 +19,7 @@ export default function ContaPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     loadProfile()
@@ -65,11 +66,6 @@ export default function ContaPage() {
       await updateUserProfile(user.id, { name })
 
       setMessage({ type: "success", text: "Alterações salvas com sucesso!" })
-
-      // Redirect to dashboard after 1 second
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 1000)
     } catch (error: any) {
       console.error("[v0] Error saving profile:", error)
       setMessage({ type: "error", text: error.message || "Erro ao salvar alterações" })
@@ -80,87 +76,122 @@ export default function ContaPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <AppHeader />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">Minha conta</h1>
-            <p className="text-muted-foreground">Gerencia as configurações e preferências de sua conta</p>
+            <h1 className="text-3xl font-bold mb-2 text-gray-900">Minha conta</h1>
+            <p className="text-gray-600">Gerencia as configurações e preferências de sua conta</p>
           </div>
 
           <Tabs defaultValue="perfil" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="perfil">Perfil</TabsTrigger>
-              <TabsTrigger value="seguranca">Segurança</TabsTrigger>
+            <TabsList className="bg-white border-b border-gray-200 rounded-none h-auto p-0 w-full justify-start">
+              <TabsTrigger
+                value="perfil"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-gray-900 data-[state=active]:bg-gray-50 px-6 py-3"
+              >
+                Perfil
+              </TabsTrigger>
+              <TabsTrigger
+                value="seguranca"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-gray-900 data-[state=active]:bg-gray-50 px-6 py-3"
+              >
+                Segurança
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="perfil" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Informações do perfil</CardTitle>
-                  <CardDescription>Atualize suas informações pessoais</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
+              <Card className="border-gray-200 shadow-sm">
+                <CardContent className="pt-6 space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Nome</Label>
+                    <Label htmlFor="name" className="text-gray-900 font-medium">
+                      Nome
+                    </Label>
                     <Input
                       id="name"
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Seu nome completo"
+                      className="border-gray-300"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">E-mail</Label>
-                    <Input id="email" type="email" value={email} disabled className="bg-muted" />
-                    <p className="text-xs text-muted-foreground">O e-mail não pode ser alterado</p>
+                    <Label htmlFor="email" className="text-gray-900 font-medium">
+                      E-mail
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      disabled
+                      className="bg-gray-100 border-gray-300 text-gray-600"
+                    />
                   </div>
 
                   {message && (
                     <div
-                      className={`p-3 rounded-lg text-sm ${
+                      className={`p-4 rounded-lg text-sm flex items-start gap-3 ${
                         message.type === "success"
-                          ? "bg-green-500/10 text-green-600 border border-green-500/20"
-                          : "bg-destructive/10 text-destructive border border-destructive/20"
+                          ? "bg-green-50 text-green-800 border border-green-200"
+                          : "bg-red-50 text-red-800 border border-red-200"
                       }`}
                     >
-                      {message.text}
+                      {message.type === "success" ? (
+                        <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                      )}
+                      <span>{message.text}</span>
                     </div>
                   )}
 
-                  <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
-                    {saving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      "Salvar alterações"
-                    )}
-                  </Button>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        "Salvar alterações"
+                      )}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="seguranca" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Segurança</CardTitle>
-                  <CardDescription>Gerencie suas configurações de segurança</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Funcionalidades de segurança em breve.</p>
+              <Card className="border-gray-200 shadow-sm">
+                <CardContent className="pt-6">
+                  <div className="border border-red-200 rounded-lg p-6 bg-red-50">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Solicite a exclusão de sua conta</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.
+                    </p>
+                    <Button
+                      variant="destructive"
+                      className="w-full bg-red-600 hover:bg-red-700"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      Excluir conta
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

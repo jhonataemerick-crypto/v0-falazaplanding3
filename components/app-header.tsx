@@ -1,10 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Moon, Sun, User } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useTheme } from "next-themes"
+import { UserProfileDropdown } from "@/components/user-profile-dropdown"
 
 export function AppHeader() {
   const { theme, setTheme } = useTheme()
@@ -54,9 +55,7 @@ export function AppHeader() {
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Toggle theme</span>
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-primary/10">
-              <User className="h-4 w-4" />
-            </Button>
+            <UserProfileDropdown />
           </div>
         </div>
       </div>

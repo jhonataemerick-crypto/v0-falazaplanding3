@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, Lock, Loader2, AlertCircle } from "lucide-react"
+import { Mail, Lock, Loader2, AlertCircle, UserPlus, Zap } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
@@ -17,7 +17,58 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isCreatingTestUser, setIsCreatingTestUser] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const handleCreateAndLoginTestUser = async () => {
+    setIsCreatingTestUser(true)
+    setError(null)
+
+    try {
+      console.log("[v0] Creating test user...")
+
+      // Chamar API para criar usuário de teste
+      const response = await fetch("/api/create-test-user", {
+        method: "POST",
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || "Erro ao criar usuário de teste")
+      }
+
+      console.log("[v0] Test user created/exists, logging in...")
+
+      // Fazer login com as credenciais de teste
+      const supabase = createClient()
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        email: result.credentials.email,
+        password: result.credentials.password,
+      })
+
+      if (loginError) {
+        throw loginError
+      }
+
+      console.log("[v0] Test user logged in successfully:", data.user?.email)
+
+      // Redirecionar para a página de assinatura
+      await new Promise((resolve) => setTimeout(resolve, 200))
+      router.push("/assinatura")
+      router.refresh()
+    } catch (err: any) {
+      console.error("[v0] Error creating/logging test user:", err)
+      setError(err.message || "Erro ao criar usuário de teste")
+    } finally {
+      setIsCreatingTestUser(false)
+    }
+  }
+
+  const handleTestLogin = () => {
+    setEmail("teste@teste.com")
+    setPassword("teste123")
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,18 +76,6 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      if (email === "teste@teste.com" && password === "teste123") {
-        console.log("[v0] Test mode login - setting cookie and redirecting")
-        document.cookie = "testMode=true; path=/; max-age=86400; SameSite=Lax"
-
-        // Aguarda um pouco para garantir que o cookie foi salvo
-        await new Promise((resolve) => setTimeout(resolve, 100))
-
-        router.push("/assinatura")
-        router.refresh()
-        return
-      }
-
       const supabase = createClient()
 
       console.log("[v0] Attempting login with Supabase...")
@@ -47,12 +86,13 @@ export default function LoginPage() {
 
       if (error) {
         console.error("[v0] Login error:", error)
+        if (error.message === "Invalid login credentials") {
+          throw new Error("Email ou senha incorretos. Verifique suas credenciais ou crie uma conta.")
+        }
         throw error
       }
 
       console.log("[v0] Login successful, user:", data.user?.email)
-
-      document.cookie = "testMode=; path=/; max-age=0"
 
       await new Promise((resolve) => setTimeout(resolve, 200))
 
@@ -75,14 +115,44 @@ export default function LoginPage() {
           <CardDescription className="text-center">Entre com seu email e senha para acessar sua conta</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="text-xs text-yellow-700">
-                <strong>Modo de Teste:</strong> Use{" "}
-                <code className="bg-yellow-500/20 px-1 rounded">teste@teste.com</code> /{" "}
-                <code className="bg-yellow-500/20 px-1 rounded">teste123</code> para entrar sem autenticação
+          <div className="mb-4 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg">
+            <div className="flex items-start gap-2 mb-3">
+              <Zap className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-blue-700 mb-1">Teste Rápido</div>
+                <div className="text-xs text-blue-600/80 mb-3">
+                  Crie um usuário de teste automaticamente e experimente todas as funcionalidades
+                </div>
               </div>
+            </div>
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              onClick={handleCreateAndLoginTestUser}
+              disabled={isCreatingTestUser || isLoading}
+            >
+              {isCreatingTestUser ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Criando usuário de teste...
+                </>
+              ) : (
+                <>
+                  <Zap className="mr-2 h-4 w-4" />
+                  Criar e entrar com usuário de teste
+                </>
+              )}
+            </Button>
+          </div>
+
+          <div className="relative mb-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Ou entre com sua conta</span>
             </div>
           </div>
 
@@ -99,7 +169,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={isLoading || isCreatingTestUser}
               />
             </div>
             <div className="space-y-2">
@@ -114,12 +184,27 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={isLoading || isCreatingTestUser}
                 minLength={6}
               />
             </div>
-            {error && <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>}
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+            {error && (
+              <div className="p-3 text-sm bg-destructive/10 border border-destructive/20 rounded-md space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <p className="text-destructive text-sm">{error}</p>
+                </div>
+                {error.includes("incorretos") && (
+                  <Link href="/auth/signup" className="block">
+                    <Button type="button" variant="outline" size="sm" className="w-full bg-transparent">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Criar conta agora
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            )}
+            <Button type="submit" className="w-full" size="lg" disabled={isLoading || isCreatingTestUser}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -132,12 +217,22 @@ export default function LoginPage() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          <div className="text-sm text-center text-muted-foreground">
-            Não tem uma conta?{" "}
-            <Link href="/auth/signup" className="text-primary hover:underline font-medium">
-              Criar conta
-            </Link>
+          <div className="w-full">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Ou</span>
+              </div>
+            </div>
           </div>
+          <Link href="/auth/signup" className="w-full">
+            <Button type="button" variant="outline" size="lg" className="w-full bg-transparent">
+              <UserPlus className="w-4 h-4 mr-2" />
+              Criar conta grátis
+            </Button>
+          </Link>
           <div className="text-sm text-center">
             <Link href="/" className="text-muted-foreground hover:text-foreground hover:underline">
               Voltar para o início

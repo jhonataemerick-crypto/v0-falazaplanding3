@@ -25,7 +25,10 @@ export async function updateSession(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error("[v0] Missing Supabase environment variables")
-    if (request.nextUrl.pathname.startsWith("/assinatura") || request.nextUrl.pathname.startsWith("/dashboard")) {
+    const protectedRoutes = ["/assinatura", "/dashboard", "/conta"]
+    const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
+
+    if (isProtectedRoute) {
       const url = request.nextUrl.clone()
       url.pathname = "/auth/login"
       return NextResponse.redirect(url)
@@ -49,7 +52,8 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  console.log("[v0] Checking authentication for:", request.nextUrl.pathname)
+  const protectedRoutes = ["/assinatura", "/dashboard", "/conta"]
+  const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
 
   // IMPORTANT: getUser() must be called to prevent random logouts
   const {
@@ -57,24 +61,20 @@ export async function updateSession(request: NextRequest) {
     error,
   } = await supabase.auth.getUser()
 
-  if (error) {
+  if (error && isProtectedRoute) {
     console.error("[v0] Error getting user:", error.message)
   }
 
-  if (user) {
-    console.log("[v0] User authenticated:", user.email)
-  } else {
-    console.log("[v0] No user found in session")
-  }
-
-  const protectedRoutes = ["/assinatura", "/dashboard", "/conta"]
-  const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
-
-  if (isProtectedRoute && !user) {
-    console.log("[v0] Redirecting to login - no user for protected route:", request.nextUrl.pathname)
-    const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
-    return NextResponse.redirect(url)
+  if (isProtectedRoute) {
+    if (user) {
+      console.log("[v0] User authenticated:", user.email)
+    } else {
+      console.log("[v0] No user found in session")
+      console.log("[v0] Redirecting to login - no user for protected route:", request.nextUrl.pathname)
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/login"
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse
