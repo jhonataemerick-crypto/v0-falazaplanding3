@@ -27,29 +27,26 @@ export default function LoginPage() {
     try {
       const supabase = createClient()
 
-      console.log("[v0] Attempting login with Supabase...")
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) {
-        console.error("[v0] Login error:", error)
         if (error.message === "Invalid login credentials") {
           throw new Error("Email ou senha incorretos. Verifique suas credenciais ou crie uma conta.")
         }
-        throw error
+        if (error.message.includes("Email not confirmed")) {
+          throw new Error("Email não confirmado. Verifique sua caixa de entrada.")
+        }
+        throw new Error(error.message)
       }
-
-      console.log("[v0] Login successful, user:", data.user?.email)
 
       await new Promise((resolve) => setTimeout(resolve, 200))
 
-      console.log("[v0] Redirecting to /assinatura")
       router.push("/assinatura")
       router.refresh()
     } catch (err: any) {
-      console.error("[v0] Login failed:", err)
       setError(err.message || "Erro ao fazer login")
     } finally {
       setIsLoading(false)

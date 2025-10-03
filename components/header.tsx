@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import { SignupFlow } from "@/components/signup-flow"
 
 export function Header() {
@@ -39,9 +40,11 @@ export function Header() {
             >
               Preços
             </a>
-            <Button variant="outline" size="sm">
-              Entrar
-            </Button>
+            <Link href="/auth/login">
+              <Button variant="outline" size="sm">
+                Entrar
+              </Button>
+            </Link>
             <SignupFlow>
               <Button size="sm" className="bg-primary hover:bg-primary/90">
                 Começar Grátis
@@ -67,9 +70,11 @@ export function Header() {
                 Preços
               </a>
               <div className="flex flex-col space-y-2 pt-4">
-                <Button variant="outline" size="sm">
-                  Entrar
-                </Button>
+                <Link href="/auth/login">
+                  <Button variant="outline" size="sm" className="w-full bg-transparent">
+                    Entrar
+                  </Button>
+                </Link>
                 <SignupFlow>
                   <Button size="sm" className="bg-primary hover:bg-primary/90">
                     Começar Grátis
