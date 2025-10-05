@@ -13,6 +13,7 @@ CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT,
   name TEXT,
+  etapa_funil etapa_funil_type DEFAULT 'Lead',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -22,12 +23,19 @@ CREATE TABLE profiles (
 - `id` (UUID, PK): ID do usuário (referência para auth.users)
 - `email` (TEXT): Email do usuário
 - `name` (TEXT): Nome do usuário
+- `etapa_funil` (ENUM): Estágio do usuário no funil (Lead, Trial, User, Churn)
 - `created_at` (TIMESTAMPTZ): Data de criação
 - `updated_at` (TIMESTAMPTZ): Data da última atualização
+
+**Tipo ENUM:**
+\`\`\`sql
+CREATE TYPE etapa_funil_type AS ENUM ('Lead', 'Trial', 'User', 'Churn');
+\`\`\`
 
 **Índices:**
 - PRIMARY KEY em `id`
 - INDEX em `email`
+- INDEX em `etapa_funil` (para segmentação e analytics)
 
 **RLS (Row Level Security):**
 - Usuários podem ler apenas seu próprio perfil
@@ -35,8 +43,7 @@ CREATE TABLE profiles (
 
 **Trigger:**
 - `create_profile_on_signup`: Cria automaticamente um perfil quando um usuário se registra
-
----
+- `update_etapa_funil_on_subscription_change`: Atualiza etapa_funil baseado na subscription
 
 ### 2. subscriptions
 
@@ -86,8 +93,6 @@ CREATE TABLE subscriptions (
 - Usuários podem ler apenas sua própria subscription
 - Apenas o sistema (service_role) pode criar/atualizar subscriptions
 
----
-
 ### 3. devices
 
 Armazena informações sobre os dispositivos WhatsApp conectados.
@@ -123,8 +128,6 @@ CREATE TABLE devices (
 **RLS (Row Level Security):**
 - Usuários podem ler apenas seus próprios devices
 - Usuários podem criar/atualizar apenas seus próprios devices
-
----
 
 ### 4. verification_codes
 

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,11 +9,37 @@ import { Mail, CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 export default function VerifyEmailPage() {
+  const searchParams = useSearchParams()
+  const emailFromUrl = searchParams.get("email")
+
+  const [email, setEmail] = useState<string | null>(emailFromUrl)
   const [isResending, setIsResending] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
   const [resendError, setResendError] = useState<string | null>(null)
 
+  useEffect(() => {
+    const getEmailFromSession = async () => {
+      if (email) return // Already have email from URL
+
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (user?.email) {
+        setEmail(user.email)
+      }
+    }
+
+    getEmailFromSession()
+  }, [email])
+
   const handleResendEmail = async () => {
+    if (!email) {
+      setResendError("Email não encontrado. Por favor, tente criar a conta novamente.")
+      return
+    }
+
     setIsResending(true)
     setResendSuccess(false)
     setResendError(null)
@@ -20,31 +47,25 @@ export default function VerifyEmailPage() {
     try {
       const supabase = createClient()
 
-      // Get the current user's email from the session (if available)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      console.log("[v0] Resending confirmation email to:", email)
 
-      if (!user?.email) {
-        setResendError("Não foi possível encontrar seu email. Por favor, tente criar a conta novamente.")
-        return
-      }
-
-      // Resend confirmation email
       const { error } = await supabase.auth.resend({
         type: "signup",
-        email: user.email,
+        email: email,
         options: {
           emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/dashboard`,
         },
       })
 
       if (error) {
+        console.error("[v0] Error resending email:", error)
         throw error
       }
 
+      console.log("[v0] Confirmation email resent successfully")
       setResendSuccess(true)
     } catch (err: any) {
+      console.error("[v0] Resend error:", err)
       setResendError(err.message || "Erro ao reenviar email")
     } finally {
       setIsResending(false)
@@ -61,7 +82,15 @@ export default function VerifyEmailPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Verifique seu email</CardTitle>
-          <CardDescription>Enviamos um link de confirmação para o seu email</CardDescription>
+          <CardDescription>
+            {email ? (
+              <>
+                Enviamos um link de confirmação para <strong>{email}</strong>
+              </>
+            ) : (
+              "Enviamos um link de confirmação para o seu email"
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3 text-sm text-muted-foreground">
@@ -95,7 +124,7 @@ export default function VerifyEmailPage() {
             onClick={handleResendEmail}
             variant="outline"
             className="w-full bg-transparent"
-            disabled={isResending || resendSuccess}
+            disabled={isResending || resendSuccess || !email}
           >
             {isResending ? (
               <>

@@ -354,16 +354,8 @@ Uma plataforma completa que:
 
 **Integração Stripe:**
 - Embedded Checkout (não redireciona para Stripe)
-- Metadata enviada:
-  - `userId`: ID do usuário
-  - `planName`: Nome do plano
-  - `planPrice`: Preço do plano
-- Trial de 3 dias incluído
-- Webhook processa eventos:
-  - `checkout.session.completed`
-  - `customer.subscription.updated`
-  - `customer.subscription.deleted`
-  - `invoice.payment_failed`
+- Experiência integrada
+- Customizável
 
 ---
 
@@ -850,22 +842,31 @@ Uma plataforma completa que:
 - Modal conexão WhatsApp (UI)
 - Banco de dados com RLS
 - Webhooks Stripe
+- Coluna etapa_funil para rastreamento do funil
+- Trigger automático para atualizar etapa_funil
+- Correção de colunas faltantes na tabela subscriptions
 
 ### 9.2 Urgente 🔴 (Próximas 2 semanas)
 
-**1. Corrigir Webhook Stripe**
+**1. Corrigir Webhook Stripe ✅ CONCLUÍDO**
 - Adicionar colunas faltantes na tabela subscriptions
 - Testar fluxo completo de pagamento
 - Validar atualização de status
 - Documentar configuração
 
-**2. Integração WhatsApp Real**
+**2. Dashboard de Analytics**
+- Gráficos de conversão por etapa do funil
+- Métricas de Lead → Trial → User
+- Taxa de churn
+- Receita por etapa
+
+**3. Integração WhatsApp Real**
 - Conectar com WhatsApp Business API
 - Implementar geração de QR Code real
 - Validar conexão de dispositivos
 - Salvar tokens de autenticação
 
-**3. Sistema de Mensagens**
+**4. Sistema de Mensagens**
 - Receber mensagens do WhatsApp
 - Processar com IA
 - Enviar respostas

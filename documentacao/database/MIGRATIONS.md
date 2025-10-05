@@ -110,6 +110,61 @@ Execute os scripts na ordem listada abaixo:
 
 ---
 
+### 006_add_etapa_funil.sql
+**Data:** Janeiro 2025
+**Descrição:** Adiciona coluna etapa_funil para rastreamento do funil de vendas
+
+**Problema identificado:**
+- Necessidade de segmentar usuários por estágio no funil
+- Dificuldade em analisar conversão entre etapas
+- Falta de automação para marketing baseado em estágio
+
+**Tipo ENUM criado:**
+\`\`\`sql
+CREATE TYPE etapa_funil_type AS ENUM ('Lead', 'Trial', 'User', 'Churn');
+\`\`\`
+
+**Coluna adicionada:**
+- `etapa_funil` (etapa_funil_type) - Estágio do usuário no funil
+  - Default: 'Lead'
+  - NOT NULL
+
+**Índice adicionado:**
+- INDEX em `etapa_funil` - Para queries de segmentação rápidas
+
+**Função criada:**
+- `update_etapa_funil()` - Atualiza etapa_funil baseado na subscription
+
+**Trigger criado:**
+- `update_etapa_funil_trigger` - Executa após INSERT/UPDATE em subscriptions
+
+**Lógica de Transição:**
+- Lead → Trial: Quando cria subscription com trial
+- Trial → User: Quando trial termina e continua pagando
+- Trial → Churn: Quando cancela durante trial
+- User → Churn: Quando cancela ou pagamento falha
+- Lead → User: Se assinar direto sem trial
+
+**Impacto:**
+- Facilita segmentação de usuários para marketing
+- Permite análise de conversão em cada etapa
+- Simplifica queries para dashboards e relatórios
+- Útil para automações (emails, notificações)
+
+**Queries úteis:**
+\`\`\`sql
+-- Contar usuários por etapa
+SELECT etapa_funil, COUNT(*) FROM profiles GROUP BY etapa_funil;
+
+-- Taxa de conversão Lead → Trial
+SELECT 
+  (COUNT(*) FILTER (WHERE etapa_funil IN ('Trial', 'User')) * 100.0 / 
+   COUNT(*) FILTER (WHERE etapa_funil != 'Lead')) as taxa_conversao
+FROM profiles;
+\`\`\`
+
+---
+
 ## Como Executar as Migrações
 
 ### Opção 1: Via v0 UI
@@ -117,13 +172,13 @@ Execute os scripts na ordem listada abaixo:
 2. Clique em "Integrations"
 3. Selecione "Supabase"
 4. Clique em "Run Script"
-5. Execute cada script na ordem (001 → 005)
+5. Execute cada script na ordem (001 → 006)
 
 ### Opção 2: Via Supabase Dashboard
 1. Acesse o Supabase Dashboard
 2. Vá para "SQL Editor"
 3. Cole o conteúdo de cada script
-4. Execute na ordem (001 → 005)
+4. Execute na ordem (001 → 006)
 
 ### Opção 3: Via CLI
 \`\`\`bash
@@ -136,6 +191,7 @@ supabase db execute --file scripts/002_create_profile_trigger.sql
 supabase db execute --file scripts/003_enable_rls.sql
 supabase db execute --file scripts/004_create_updated_at_trigger.sql
 supabase db execute --file scripts/005_add_subscription_columns.sql
+supabase db execute --file scripts/006_add_etapa_funil.sql
 \`\`\`
 
 ---
@@ -162,6 +218,13 @@ SELECT column_name, data_type
 FROM information_schema.columns 
 WHERE table_name = 'subscriptions' 
 AND table_schema = 'public';
+
+-- Verificar coluna etapa_funil na tabela profiles
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'profiles' 
+AND table_schema = 'public' 
+AND column_name = 'etapa_funil';
 \`\`\`
 
 Todas as queries acima devem retornar os resultados esperados.

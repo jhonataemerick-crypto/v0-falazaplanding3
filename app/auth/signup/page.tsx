@@ -45,7 +45,7 @@ export default function SignupPage() {
 
       console.log("[v0] User signup initiated:", data.user?.id)
 
-      router.push("/auth/verify-email")
+      router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`)
     } catch (err: any) {
       setError(err.message || "Erro ao criar conta")
     } finally {

@@ -23,6 +23,7 @@ Este documento descreve os relacionamentos entre as tabelas do banco de dados.
 │  - id (PK, FK)      │
 │  - email            │
 │  - name             │
+│  - etapa_funil      │◄─── NOVO: Rastreamento do funil
 │  - created_at       │
 │  - updated_at       │
 └─────────────────────┘
@@ -77,22 +78,36 @@ Este documento descreve os relacionamentos entre as tabelas do banco de dados.
 - Cada usuário autenticado tem exatamente um perfil
 - O perfil é criado automaticamente quando o usuário se registra
 - O ID do perfil é o mesmo ID do usuário (auth.users.id)
+- **NOVO:** O campo `etapa_funil` rastreia o estágio do usuário no funil de vendas
 
 **Implementação:**
 \`\`\`sql
 profiles.id REFERENCES auth.users(id) ON DELETE CASCADE
 \`\`\`
 
-**Trigger:**
+**Triggers:**
 \`\`\`sql
+-- Cria perfil automaticamente no signup
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- Atualiza etapa_funil baseado na subscription
+CREATE TRIGGER update_etapa_funil_trigger
+  AFTER INSERT OR UPDATE ON subscriptions
+  FOR EACH ROW EXECUTE FUNCTION update_etapa_funil();
 \`\`\`
 
 **Comportamento:**
 - Quando um usuário é deletado, o perfil é deletado automaticamente (CASCADE)
 - O trigger garante que o perfil é criado imediatamente após o registro
+- **NOVO:** Quando uma subscription é criada/atualizada, a etapa_funil é atualizada automaticamente
+
+**Lógica de etapa_funil:**
+- **Lead:** Usuário cadastrado, sem subscription
+- **Trial:** Subscription ativa com trial_ends_at no futuro
+- **User:** Subscription ativa, trial finalizado, pagando
+- **Churn:** Subscription cancelada ou com pagamento falhado
 
 ---
 
@@ -172,11 +187,12 @@ DELETE FROM auth.users WHERE id = 'user-uuid';
 ### Buscar todos os dados de um usuário
 
 \`\`\`sql
--- Perfil + Subscription + Devices
+-- Perfil + Subscription + Devices + Etapa do Funil
 SELECT 
   u.id,
   u.email,
   p.name,
+  p.etapa_funil,
   s.plan_name,
   s.status as subscription_status,
   COUNT(d.id) as total_devices
@@ -185,7 +201,7 @@ LEFT JOIN profiles p ON p.id = u.id
 LEFT JOIN subscriptions s ON s.user_id = u.id
 LEFT JOIN devices d ON d.user_id = u.id
 WHERE u.id = 'user-uuid'
-GROUP BY u.id, u.email, p.name, s.plan_name, s.status;
+GROUP BY u.id, u.email, p.name, p.etapa_funil, s.plan_name, s.status;
 \`\`\`
 
 ### Buscar usuários com subscription ativa
@@ -216,6 +232,47 @@ WHERE d.user_id = 'user-uuid'
 ORDER BY d.created_at DESC;
 \`\`\`
 
+### Buscar usuários por etapa do funil
+
+\`\`\`sql
+-- Contar usuários por etapa
+SELECT 
+  etapa_funil,
+  COUNT(*) as total_usuarios
+FROM profiles
+GROUP BY etapa_funil
+ORDER BY 
+  CASE etapa_funil
+    WHEN 'Lead' THEN 1
+    WHEN 'Trial' THEN 2
+    WHEN 'User' THEN 3
+    WHEN 'Churn' THEN 4
+  END;
+\`\`\`
+
+### Análise de conversão do funil
+
+\`\`\`sql
+-- Taxa de conversão entre etapas
+WITH funil_stats AS (
+  SELECT 
+    COUNT(*) FILTER (WHERE etapa_funil = 'Lead') as leads,
+    COUNT(*) FILTER (WHERE etapa_funil = 'Trial') as trials,
+    COUNT(*) FILTER (WHERE etapa_funil = 'User') as users,
+    COUNT(*) FILTER (WHERE etapa_funil = 'Churn') as churned
+  FROM profiles
+)
+SELECT 
+  leads,
+  trials,
+  users,
+  churned,
+  ROUND((trials::numeric / NULLIF(leads, 0)) * 100, 2) as taxa_lead_to_trial,
+  ROUND((users::numeric / NULLIF(trials, 0)) * 100, 2) as taxa_trial_to_user,
+  ROUND((churned::numeric / NULLIF(users, 0)) * 100, 2) as taxa_churn
+FROM funil_stats;
+\`\`\`
+
 ---
 
 ## Considerações de Performance
@@ -234,6 +291,9 @@ CREATE INDEX idx_devices_user_id ON devices(user_id);
 
 -- Buscar devices por status (monitoramento)
 CREATE INDEX idx_devices_status ON devices(status);
+
+-- Buscar usuários por etapa do funil (analytics e segmentação)
+CREATE INDEX idx_profiles_etapa_funil ON profiles(etapa_funil);
 \`\`\`
 
 Estes índices garantem que as queries mais comuns sejam rápidas mesmo com milhares de registros.
