@@ -32,7 +32,7 @@ export default function SignupPage() {
         email,
         password,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/assinatura`,
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/dashboard`,
           data: {
             name: name,
           },
@@ -43,11 +43,9 @@ export default function SignupPage() {
         throw error
       }
 
-      console.log("[v0] User created successfully:", data.user?.id)
+      console.log("[v0] User signup initiated:", data.user?.id)
 
-      // Redirect to subscription page
-      router.push("/assinatura")
-      router.refresh()
+      router.push("/auth/verify-email")
     } catch (err: any) {
       setError(err.message || "Erro ao criar conta")
     } finally {
@@ -122,6 +120,9 @@ export default function SignupPage() {
                 "Criar conta"
               )}
             </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Você receberá um email de confirmação após criar sua conta
+            </p>
             <p className="text-xs text-center text-muted-foreground">
               Ao continuar, você concorda com nossos Termos de Uso e Política de Privacidade
             </p>

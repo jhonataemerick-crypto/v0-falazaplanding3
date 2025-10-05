@@ -37,10 +37,14 @@ export default function LoginPage() {
           throw new Error("Email ou senha incorretos. Verifique suas credenciais ou crie uma conta.")
         }
         if (error.message.includes("Email not confirmed")) {
-          throw new Error("Email não confirmado. Verifique sua caixa de entrada.")
+          throw new Error(
+            "Email não confirmado. Verifique sua caixa de entrada e confirme seu email antes de fazer login.",
+          )
         }
         throw new Error(error.message)
       }
+
+      console.log("[v0] User logged in successfully:", data.user?.id)
 
       await new Promise((resolve) => setTimeout(resolve, 200))
 
@@ -104,6 +108,14 @@ export default function LoginPage() {
                     <Button type="button" variant="outline" size="sm" className="w-full bg-transparent">
                       <UserPlus className="w-4 h-4 mr-2" />
                       Criar conta agora
+                    </Button>
+                  </Link>
+                )}
+                {error.includes("não confirmado") && (
+                  <Link href="/auth/verify-email" className="block">
+                    <Button type="button" variant="outline" size="sm" className="w-full bg-transparent">
+                      <Mail className="w-4 h-4 mr-2" />
+                      Reenviar email de confirmação
                     </Button>
                   </Link>
                 )}

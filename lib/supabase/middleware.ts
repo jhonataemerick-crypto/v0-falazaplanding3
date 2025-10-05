@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function updateSession(request: NextRequest) {
-  const publicRoutes = ["/", "/auth/login", "/auth/signup"]
+  const publicRoutes = ["/", "/auth/login", "/auth/signup", "/auth/verify-email"]
   const isPublicRoute = publicRoutes.some((route) => request.nextUrl.pathname === route)
 
   // For public routes, just pass through

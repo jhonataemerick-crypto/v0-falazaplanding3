@@ -11,7 +11,7 @@ export type Profile = {
 export async function getUserProfile(userId: string): Promise<Profile | null> {
   const supabase = createClient()
 
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle()
 
   if (error) {
     console.error("[v0] Error fetching profile:", error)

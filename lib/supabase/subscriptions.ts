@@ -79,11 +79,16 @@ export async function updateSubscriptionByStripeId(stripeSubscriptionId: string,
     .update(updates)
     .eq("stripe_subscription_id", stripeSubscriptionId)
     .select()
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error("[v0] Error updating subscription by Stripe ID:", error)
     throw error
+  }
+
+  if (!data) {
+    console.warn("[v0] No subscription found with Stripe ID:", stripeSubscriptionId)
+    return null
   }
 
   return data
@@ -92,7 +97,7 @@ export async function updateSubscriptionByStripeId(stripeSubscriptionId: string,
 export async function getSubscriptionByUserId(userId: string): Promise<Subscription | null> {
   const supabase = await createClient()
 
-  const { data, error } = await supabase.from("subscriptions").select("*").eq("user_id", userId).single()
+  const { data, error } = await supabase.from("subscriptions").select("*").eq("user_id", userId).maybeSingle()
 
   if (error) {
     console.error("[v0] Error fetching subscription:", error)
@@ -109,7 +114,7 @@ export async function getSubscriptionByStripeId(stripeSubscriptionId: string): P
     .from("subscriptions")
     .select("*")
     .eq("stripe_subscription_id", stripeSubscriptionId)
-    .single()
+    .maybeSingle()
 
   if (error) {
     console.error("[v0] Error fetching subscription by Stripe ID:", error)

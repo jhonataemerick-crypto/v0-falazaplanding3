@@ -19,7 +19,7 @@ export type Subscription = {
 export async function getUserSubscription(userId: string): Promise<Subscription | null> {
   const supabase = createClient()
 
-  const { data, error } = await supabase.from("subscriptions").select("*").eq("user_id", userId).single()
+  const { data, error } = await supabase.from("subscriptions").select("*").eq("user_id", userId).maybeSingle()
 
   if (error) {
     console.error("[v0] Error fetching subscription:", error)
