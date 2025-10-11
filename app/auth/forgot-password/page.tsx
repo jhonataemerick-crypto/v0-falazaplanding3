@@ -72,33 +72,46 @@ export default function ForgotPasswordPage() {
         redirectTo: redirectUrl,
       })
 
-      console.log("[v0] Reset password response:", { data, error: resetError })
-
       if (resetError) {
-        console.error("[v0] Password reset error:", resetError.message)
-        console.error("[v0] Error code:", resetError.code)
-        console.error("[v0] Error status:", resetError.status)
+        console.log("[v0] Password reset failed - Error code:", resetError.code, "Status:", resetError.status)
 
         if (resetError.status === 429 || resetError.code === "over_email_send_rate_limit") {
+          console.log("[v0] ❌ RATE LIMIT ERROR - Setting 60s cooldown")
           const cooldownEnd = Date.now() + COOLDOWN_SECONDS * 1000
           localStorage.setItem(COOLDOWN_KEY, cooldownEnd.toString())
           setCooldownRemaining(COOLDOWN_SECONDS)
-          throw new Error("RATE_LIMIT")
-        } else if (resetError.status === 500 || resetError.code === "unexpected_failure") {
-          throw new Error("SMTP_NOT_CONFIGURED")
-        } else if (resetError.message.includes("Invalid email")) {
-          throw new Error("Email inválido. Por favor, verifique o endereço de email.")
-        } else {
-          throw new Error(resetError.message)
+          setError("RATE_LIMIT")
+          setIsLoading(false)
+          return
         }
+
+        if (resetError.status === 500 || resetError.code === "unexpected_failure") {
+          console.log("[v0] ❌ SMTP NOT CONFIGURED - Showing configuration instructions to user")
+          setError("SMTP_NOT_CONFIGURED")
+          setIsLoading(false)
+          return
+        }
+
+        if (resetError.message.includes("Invalid email") || resetError.message.includes("invalid")) {
+          console.log("[v0] ❌ INVALID EMAIL - User entered invalid email format")
+          setError("Email inválido. Por favor, verifique o endereço de email.")
+          setIsLoading(false)
+          return
+        }
+
+        // For any other errors
+        console.log("[v0] ❌ UNKNOWN ERROR:", resetError.message)
+        setError("Não foi possível enviar o email de recuperação. Por favor, tente novamente mais tarde.")
+        setIsLoading(false)
+        return
       }
 
-      console.log("[v0] Password reset email sent successfully")
+      console.log("[v0] ✅ Password reset email sent successfully to:", email)
       setSuccess(true)
       setEmail("")
     } catch (err: any) {
-      console.error("[v0] Error in password reset:", err)
-      setError(err.message || "Erro ao enviar email de recuperação")
+      console.error("[v0] ❌ UNEXPECTED ERROR in password reset:", err)
+      setError("Erro inesperado. Por favor, tente novamente.")
     } finally {
       setIsLoading(false)
     }
